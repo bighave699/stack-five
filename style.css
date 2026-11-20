@@ -12,3 +12,5 @@
 
 
 .combined-banner{padding:24px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(110deg,#35271f,#191c22);margin-bottom:22px}.combined-banner h2{font-size:26px;margin:10px 0}.combined-method{margin:22px 0;padding:16px 20px;background:var(--panel);border:1px solid var(--line);border-radius:7px}.combined-method summary{cursor:pointer;color:var(--accent)}.combined-method p{font-size:12px;line-height:1.9}.combined-method+.dialog-notice{margin-top:12px}@media(max-width:540px){.header nav{gap:11px}.header-inner{gap:12px}.combined-banner{padding:18px}.combined-banner h2{font-size:21px}}
+
+.rank-badge{display:inline-flex;align-items:center;gap:7px;padding:3px 7px;border:1px solid #aa80534d;border-radius:5px;color:#edba88;white-space:nowrap;font:600 13px var(--mono)}.rank-badge small{color:var(--muted);font:10px var(--mono)}.account-mini .rank-badge{font-size:10px;padding:2px 4px;gap:3px}.account-mini .rank-badge small{display:none}.profile-metrics .rank-badge{font-size:22px;padding:0;border:0}.profile-metrics .rank-badge small{font-size:12px}
