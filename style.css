@@ -48,3 +48,8 @@
   --avatar-crop:238.6% 233.3%;
   --avatar-focus:45.6% 35.9%;
 }
+.avatar-zhangyuxuan{
+  --avatar-image:url("avatars/zhangyuxuan.jpg?v=1");
+  --avatar-crop:165% 164%;
+  --avatar-focus:50% 7%;
+}
