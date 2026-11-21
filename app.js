@@ -9,7 +9,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fmt=(v,n=2)=>typeof v==='number'&&Number.isFinite(v)?v.toFixed(n):'—';
 const percent=(v,n=1)=>typeof v==='number'?fmt(v,n)+'%':'—';
 const who=id=>players.find(p=>p.id===id);
-const avatar=(p,size='')=>`<span class="avatar ${size}" style="--avatar-bg:${p.bg};--avatar-color:${p.color}">${p.initial}</span>`;
+const avatar=(p,size='')=>`<span class="avatar avatar-${p.id} ${size}" aria-hidden="true" style="--avatar-bg:${p.bg};--avatar-color:${p.color}">${p.initial}</span>`;
 const badge=p=>`<span class="platform-badge ${p==='5E'?'five':''}">${p==='5E'?'5E':'完美'}</span>`;
 const state={page:'overview',platform:'all',search:'',period:'all',player:'all',map:'all',result:'all',limit:20,recordView:'matches',combinedSort:'rating',minGames:1,sort:'rating',direction:-1};
 const rowSnapshots=id=>snapshots.filter(s=>(!id||s.player===id)&&(state.platform==='all'||s.platform===state.platform));
