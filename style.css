@@ -334,3 +334,6 @@ dialog::backdrop { background: #0b0d12bb; }
 .avatar-furuikai{
   --avatar-image:url("avatars/furuikai.jpg?v=1");
 }
+.avatar-liuhaoxuan{
+  --avatar-image:url("avatars/liuhaoxuan.jpg?v=1");
+}
