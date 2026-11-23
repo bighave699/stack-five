@@ -331,3 +331,6 @@ dialog::backdrop { background: #0b0d12bb; }
   --avatar-crop:165% 164%;
   --avatar-focus:50% 7%;
 }
+.avatar-furuikai{
+  --avatar-image:url("avatars/furuikai.jpg?v=1");
+}
