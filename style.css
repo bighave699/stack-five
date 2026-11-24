@@ -120,7 +120,31 @@ main { max-width: 1320px; padding: 30px 28px 0; margin: auto; }
 .rank-badge { display: inline-flex; align-items: baseline; gap: 5px; color: #efc092; border: 1px solid #ba8a5e55; padding: 2px 5px; border-radius: 4px; white-space: nowrap; font: 600 12px var(--mono); }
 .rank-badge small { font: 10px var(--mono); color: var(--muted); }
 .player-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 13px; }
-.player-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.player-card { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.player-fun-link { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 3px 10px; width: 100%; margin-top: auto; padding: 9px 15px; border-top: 1px solid var(--line); color: var(--accent); text-align: left; font-size: 13px; }
+.player-fun-link:hover { background: var(--surface); }
+.player-fun-link:focus-visible { outline-offset: -3px; }
+.player-fun-link small { color: var(--muted); }
+.fun-board { margin-bottom: 18px; }
+.fun-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.fun-tile { min-width: 0; display: flex; flex-direction: column; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.fun-tile h3 { margin: 0; font-size: 13px; }
+.fun-value { margin: 6px 0; font: 700 28px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.fun-value small { margin-left: 5px; color: var(--muted); font: 12px var(--font); }
+.fun-leaders { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 5px; }
+.fun-tile .table-note { margin: auto 0 0; }
+.fun-weapons { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 13px; }
+.fun-weapons small { color: var(--muted); }
+.fun-profile-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.fun-evidence { margin-top: 16px; }
+.fun-evidence ul { list-style: none; padding: 0; margin: 0; }
+.fun-evidence li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; border-top: 1px solid var(--line); padding: 8px 0; font-size: 13px; }
+.fun-evidence p { margin: 6px 0; }
+@media (max-width: 700px) {
+  .fun-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .fun-tile { padding: 10px; }
+  .fun-value { font-size: 24px; }
+}
 .player-card-header { width: 100%; display: flex; align-items: center; gap: 12px; padding: 15px 15px 13px; text-align: left; }
 .player-card-header:hover, .account-line:hover { background: var(--surface); }
 .player-card-header strong { display: block; font-size: 19px; }

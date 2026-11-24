@@ -88,7 +88,112 @@ function overview() {
   </div>`;
 }
 
-function playerCard(player) {
+const funAwards = [
+  {key:'jail', title:'坐牢王', unit:'场', rule:'输掉比赛，且队内击杀第一（含并列）'},
+  {key:'late', title:'加班王', unit:'场', rule:'单场打满 24 回合或更久'},
+  {key:'streak', title:'最长连败', unit:'连败', rule:'按已收录的有时间战报排序，胜场或平局中断'},
+  {key:'assists', title:'助攻发动机', unit:'次 / 24 回合', rule:'有助攻数据的场次，按回合数折算'},
+];
+
+const fullBoards = new Map(matches.filter(m => m.fullScoreboard).map(m => [m.id, m]));
+const funCache = new Map();
+
+function playerFunStats(platform) {
+  if (funCache.has(platform)) return funCache.get(platform);
+  const stats = new Map(players.map(p => [p.id, {
+    boards:0, timed:0, jail:0, late:0, streak:0, thirty:0, assists:null,
+    runningLosses:0, assistTotal:0, assistRounds:0, jailGames:[]
+  }]));
+  for (const row of D.combined.records) {
+    if (!row.matchId || (platform !== 'all' && row.platform !== platform)) continue;
+    const result = stats.get(row.player);
+    result.timed++;
+    result.runningLosses = row.result === 'loss' ? result.runningLosses + 1 : 0;
+    result.streak = Math.max(result.streak, result.runningLosses);
+    const board = fullBoards.get(row.matchId);
+    if (!board) continue;
+    result.boards++;
+    if (row.rounds >= 24) result.late++;
+    if (row.kill >= 30) result.thirty++;
+    if (Number.isFinite(row.assist) && row.rounds > 0) {
+      result.assistTotal += row.assist;
+      result.assistRounds += row.rounds;
+    }
+    if (row.result !== 'loss' || !Number.isFinite(row.kill)) continue;
+    const team = board.teams.find(t => t.some(p => p.player === row.player));
+    if (team?.every(p => Number.isFinite(p.kill) && p.kill <= row.kill)) {
+      result.jail++;
+      if (result.jailGames.length < 3) result.jailGames.push(row);
+    }
+  }
+  for (const result of stats.values()) {
+    if (result.assistRounds) result.assists = Math.round(240 * result.assistTotal / result.assistRounds) / 10;
+  }
+  funCache.set(platform, stats);
+  return stats;
+}
+
+function weaponSamples() {
+  return inPlatform('完美') ? D.weaponSamples || [] : [];
+}
+
+function funValue(key, value) {
+  return fmt(value, key === 'assists' ? 1 : 0);
+}
+
+function funBoard(stats) {
+  const spotlights = weaponSamples().filter(sample => sample.spotlight);
+  return `<section class="fun-board" aria-labelledby="fun-title">
+    <div class="section-title"><h2 id="fun-title">队内趣味榜</h2></div>
+    <div class="fun-grid">${funAwards.map(award => {
+      const best = Math.max(0, ...players.map(p => stats.get(p.id)[award.key] ?? 0));
+      const leaders = best > 0 ? players.filter(p => stats.get(p.id)[award.key] === best) : [];
+      return `<article class="fun-tile">
+        <h3>${award.title}</h3>
+        <p class="fun-value">${funValue(award.key, leaders.length ? best : null)}${leaders.length ? `<small>${award.unit}</small>` : ''}</p>
+        <div class="fun-leaders">${leaders.map(p => `<button class="text-link" data-fun-player="${p.id}">${esc(p.name)} <span aria-hidden="true">↗</span></button>`).join('')}</div>
+        <p class="table-note">${award.rule}</p>
+      </article>`;
+    }).join('')}</div>
+    <p class="table-note">按当前平台的已收录排位计算。连败看有时间的战报，其余项目取完整十人计分板。</p>
+    ${spotlights.length ? `<div class="fun-weapons">
+      <strong>武器看点</strong>
+      ${spotlights.map(sample => `<button class="text-link" data-fun-player="${sample.player}">${esc(who(sample.player).name)} · ${esc(sample.weapon)} ${sample.kills} 杀 <span aria-hidden="true">↗</span></button>`).join('')}
+      <small>完美 2026 S3 截图中的展示枪械</small>
+    </div>` : ''}
+  </section>`;
+}
+
+function showPlayerFun(id) {
+  const player = who(id);
+  if (!player) return;
+  const stats = playerFunStats(state.platform).get(id);
+  const scope = state.platform === 'all' ? '完美 + 5E' : state.platform;
+  const weapons = weaponSamples().filter(sample => sample.player === id);
+  const cards = [
+    {label:'坐牢局', key:'jail', unit:'场', foot:'败局中击杀队内第一（含并列）'},
+    {label:'加班局', key:'late', unit:'场', foot:'单场至少 24 回合'},
+    {label:'最长连败', key:'streak', unit:'场', foot:`按 ${stats.timed} 条有时间的战报计算`},
+    {label:'助攻频率', key:'assists', unit:'次', foot:'每 24 回合'},
+    {label:'30 杀俱乐部', key:'thirty', unit:'场', foot:'单场至少 30 杀'},
+  ];
+  showDialog('趣味数据', `<div class="profile-top">${avatar(player, 'huge')}<div>
+    <h2 id="dialogTitle">${esc(player.name)}</h2><p>${scope} · ${stats.boards} 场完整十人计分板</p>
+  </div></div>
+  <div class="fun-grid fun-profile-grid">${cards.map(({label,key,unit,foot}) => {
+    const value = (key === 'streak' ? stats.timed : stats.boards) ? stats[key] : null;
+    return metric(label, funValue(key,value) + (value != null ? ' ' + unit : ''), foot);
+  }).join('')}</div>
+  ${stats.jailGames.length ? `<section class="fun-evidence"><h3 class="dialog-subtitle">最近坐牢战报</h3>
+    <ul>${stats.jailGames.map(row => `<li><button class="text-link" data-match="${esc(row.matchId)}">${timeLabel(row.date)} · ${esc(row.map)} ↗</button><span>${row.kill} 杀 ${row.death} 死</span></li>`).join('')}</ul>
+  </section>` : ''}
+  ${weapons.length ? `<section class="fun-evidence"><h3 class="dialog-subtitle">武器截图</h3>
+    ${weapons.map(sample => `<p><strong>${esc(sample.weapon)}</strong> · ${sample.kills} 杀 · 场均 ${fmt(sample.killsPerMatch,1)} 杀 · 爆头率 ${percent(sample.hs)}</p>
+    <p class="table-note">${esc(sample.scope)} · ${esc(sample.account)} · 截图采集于 ${esc(sample.capturedAt)}</p>`).join('')}
+  </section>` : ''}`);
+}
+
+function playerCard(player, fun) {
   const accounts = rowSnapshots(player.id);
   return `<article class="player-card">
     <button class="player-card-header" data-player="${player.id}">
@@ -100,6 +205,10 @@ function playerCard(player) {
       ${badge(s.platform)}<span class="account-name" title="${esc(s.account)}">${esc(s.account)}</span>
       ${rankBadge(s)}<strong title="${esc(s.ratingLabel)}">${fmt(s.rating)}</strong>
     </button>`).join('')}</div>
+    <button class="player-fun-link" data-fun-player="${player.id}" aria-label="查看${esc(player.name)}的趣味数据">
+      <span>趣味数据 <span aria-hidden="true">↗</span></span>
+      ${fun.boards ? `<small>${fun.jail} 场坐牢 · ${fun.late} 场加班</small>` : ''}
+    </button>
   </article>`;
 }
 
@@ -113,8 +222,10 @@ function peopleMatch(p) {
 
 function playersPage() {
   const list = players.filter(p => rowSnapshots(p.id).length && peopleMatch(p));
-  return `<div class="toolbar">${searchField('搜索选手', '搜索姓名或平台昵称')}<span class="result-count">${list.length} 位选手</span></div>
-    ${list.length ? `<div class="player-cards">${list.map(playerCard).join('')}</div>` : empty('未找到选手', '试试其他姓名或昵称。')}`;
+  const stats = playerFunStats(state.platform);
+  return `${funBoard(stats)}
+    <div class="toolbar">${searchField('搜索选手', '搜索姓名或平台昵称')}<span class="result-count">${list.length} 位选手</span></div>
+    ${list.length ? `<div class="player-cards">${list.map(p => playerCard(p, stats.get(p.id))).join('')}</div>` : empty('未找到选手', '试试其他姓名或昵称。')}`;
 }
 
 function matchClock(date) {
@@ -234,7 +345,7 @@ function combinedPage() {
 
 function render(){const meta={combined:['个人汇总','按选手合并已收录的完美天梯和 5E 排位成绩。'],overview:['小队总览','完美与 5E 的选手表现和最近战报。'],players:['选手档案','选择账号，查看赛季数据和个人比赛记录。'],matches:['比赛记录','按日期浏览赛果，点击比分查看计分板。'],rankings:['平台排行','按平台和账号查看赛季数据。']}[state.page];$('#pageTitle').textContent=meta[0];$('#pageSubtitle').textContent=meta[1];document.querySelectorAll('[data-page]').forEach(e=>{e.classList.toggle('active',e.dataset.page===state.page);if(e.dataset.page===state.page)e.setAttribute('aria-current','page');else e.removeAttribute('aria-current');});document.querySelectorAll('[data-platform]').forEach(e=>{const active=e.dataset.platform===state.platform;e.classList.toggle('active',active);e.setAttribute('aria-pressed',String(active));});$('#content').innerHTML=({combined:combinedPage,overview,players:playersPage,matches:matchesPage,rankings:rankingsPage}[state.page])();}
 function navigate(){state.page=['overview','players','matches','rankings','combined'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';state.search='';state.limit=20;state.player='all';state.map='all';render();}
-document.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)return;if(el.dataset.recordView){state.recordView=el.dataset.recordView;state.limit=20;render();}if(el.dataset.platform){state.platform=el.dataset.platform;state.map='all';if(state.platform==='5E')state.recordView='matches';state.limit=20;render();}if(el.dataset.combinedSort){const key=el.dataset.combinedSort;state.combinedDirection=state.combinedSort===key?-state.combinedDirection:-1;state.combinedSort=key;render();document.querySelector(`[data-combined-sort="${key}"]`)?.focus();}if(el.hasAttribute('data-stats-toggle')){state.showAllStats=!state.showAllStats;render();document.querySelector('[data-stats-toggle]')?.focus();}if(el.dataset.combined)showCombined(el.dataset.combined);if(el.dataset.player)showPlayer(el.dataset.player,el.dataset.account);if(el.dataset.match)showMatch(el.dataset.match);if(el.dataset.record)showRecord(el.dataset.record);if(el.hasAttribute('data-more')){state.limit+=20;render();}if(el.dataset.sort){state.direction=state.sort===el.dataset.sort?-state.direction:-1;state.sort=el.dataset.sort;render();}});
+document.addEventListener('click',e=>{const el=e.target.closest('button');if(!el)return;if(el.dataset.recordView){state.recordView=el.dataset.recordView;state.limit=20;render();}if(el.dataset.platform){state.platform=el.dataset.platform;state.map='all';if(state.platform==='5E')state.recordView='matches';state.limit=20;render();}if(el.dataset.combinedSort){const key=el.dataset.combinedSort;state.combinedDirection=state.combinedSort===key?-state.combinedDirection:-1;state.combinedSort=key;render();document.querySelector(`[data-combined-sort="${key}"]`)?.focus();}if(el.hasAttribute('data-stats-toggle')){state.showAllStats=!state.showAllStats;render();document.querySelector('[data-stats-toggle]')?.focus();}if(el.dataset.funPlayer)showPlayerFun(el.dataset.funPlayer);if(el.dataset.combined)showCombined(el.dataset.combined);if(el.dataset.player)showPlayer(el.dataset.player,el.dataset.account);if(el.dataset.match)showMatch(el.dataset.match);if(el.dataset.record)showRecord(el.dataset.record);if(el.hasAttribute('data-more')){state.limit+=20;render();}if(el.dataset.sort){state.direction=state.sort===el.dataset.sort?-state.direction:-1;state.sort=el.dataset.sort;render();}});
 document.addEventListener('input',e=>{if(e.target.id==='search'){const pos=e.target.selectionStart;state.search=e.target.value;state.limit=20;render();$('#search').focus();$('#search').setSelectionRange(pos,pos);}});
 document.addEventListener('change',e=>{const controls={recordPlayer:'player',recordMap:'map',period:'period',minGames:'minGames'};if(controls[e.target.id]){state[controls[e.target.id]]=e.target.id==='minGames'?Number(e.target.value):e.target.value;state.limit=20;render();}if(e.target.id==='profileAccount')showPlayer(e.target.dataset.owner,e.target.value);if(e.target.id==='comparePlatform')fillCompare();if(['compareA','compareB'].includes(e.target.id))updateCompare();});
 $('#closeDialog').addEventListener('click',()=>$('#detailDialog').close());$('#compareButton').addEventListener('click',showCompare);$('#squadButton').addEventListener('click',showSquad);window.addEventListener('hashchange',navigate);navigate();
